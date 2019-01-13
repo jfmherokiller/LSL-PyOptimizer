@@ -32,6 +32,7 @@ import sys, os, getopt, re
 import lslopt.lslcommon
 import lslopt.lslloadlib
 from strutil import *
+from cpreproc import Preproc
 
 
 VERSION = '0.3.0beta'
@@ -251,6 +252,8 @@ Use: {progname} -O help for help on the optimizer control options.
 Comments are always removed in the output, even when using --prettify.
 
 Preprocessor modes:
+    int       Preprocess source using the internal preprocessor
+              (ignores --precmd; accepts --preargs -D and -I)
     ext       Invoke a preprocessor with no default parameters
     mcpp      Invoke mcpp as preprocessor, setting default parameters pertinent
               to it. Implies --precmd=mcpp
@@ -483,7 +486,7 @@ def main(argv):
 
         elif opt in ('-p', '--preproc'):
             preproc = arg.lower()
-            supported = ('ext', 'mcpp', 'gcpp', 'none')
+            supported = ('int', 'ext', 'mcpp', 'gcpp', 'none')
             if preproc not in supported:
                 Usage(argv[0])
                 werr(u"\nUnknown --preproc option: '%s'."
@@ -659,9 +662,53 @@ def main(argv):
                 return 1
 
         if preproc != 'none':
-            # At this point, for the external preprocessor to work we need the
-            # script as a byte array, not as unicode, but it should be UTF-8.
+            # At this point, for the preprocessor to work we need the script
+            # as a byte array, not as unicode, but it should be UTF-8.
             script = PreparePreproc(script.decode('utf8')).encode('utf8')
+
+        if preproc == 'int':
+            # Use internal preprocessor.
+
+            # Parse -D and -I in preproc_cmdline.
+            skip_first = True
+            defines = []
+            # For stdin, this uses the current dir.
+            incpaths = [os.path.dirname(os.path.abspath(fname))]
+
+            for i in preproc_cmdline:
+                if skip_first:
+                    skip_first = False
+                    continue
+
+                if i.startswith('-D'):
+                    if '=' not in i:
+                        i += '=1'
+                    j = i.index('=')
+                    if j == 2:
+                        sys.stderr.write(u"\nError: Empty macro name"
+                            u" in definition.\n")
+                        return 1
+
+                    defines.append((i[2:j], i[j + 1:]))
+
+                elif i.startswith('-I'):
+                    incpaths.append(i[2:])
+
+                else:
+                    sys.stderr.write(u"\nError: Option for the internal"
+                        u" preprocessor not -D or -I:\n    %s\n"
+                        % i.decode('utf8', 'replace'))
+                    return 1
+
+            script, macros = Preproc(script, defines, incpaths).get()
+
+            if 'USE_LAZY_LISTS' in macros:
+                options.add('lazylists')
+            if 'USE_SWITCHES' in macros:
+                options.add('enableswitch')
+            del macros
+
+        elif preproc != 'none':
             if preproc == 'mcpp':
                 # As a special treatment for mcpp, we force it to output its
                 # macros so we can read if USE_xxx are defined. With GCC that

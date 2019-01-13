@@ -575,14 +575,12 @@ class Evaluator(object):
         return result
 
 class Preproc(preprocessor.Preprocessor):
-    def __init__(self, input, defines=(), sysincpaths=(), incpaths=()):
+    def __init__(self, input, defines=(), incpaths=()):
         super(Preproc, self).__init__()
         self.auto_pragma_once_enabled = False
         for define in defines:
             self.define('%s %s' % define)
 
-        for v in sysincpaths:
-            self.add_path(v)
         for v in incpaths:
             self.add_path(v)
 
