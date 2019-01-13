@@ -666,6 +666,7 @@ def main(argv):
             # as a byte array, not as unicode, but it should be UTF-8.
             script = PreparePreproc(script.decode('utf8')).encode('utf8')
 
+        pperrors = False
         if preproc == 'int':
             # Use internal preprocessor.
 
@@ -700,7 +701,9 @@ def main(argv):
                         % i.decode('utf8', 'replace'))
                     return 1
 
-            script, macros = Preproc(script, defines, incpaths).get()
+            pperrors, script, macros = Preproc(script, defines, incpaths).get()
+            if pperrors:
+                preshow = True # Force preshow to display errors
 
             if 'USE_LAZY_LISTS' in macros:
                 options.add('lazylists')
@@ -779,6 +782,11 @@ def main(argv):
                 outf.write(script)
             finally:
                 outf.close()
+
+        if pperrors:
+            sys.stderr.write(u"\n* Errors found during preprocessing\n")
+            return 1
+
         return 0
 
     except Exception as e:

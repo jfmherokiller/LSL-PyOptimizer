@@ -586,6 +586,7 @@ class Preproc(preprocessor.Preprocessor):
 
         self.ignore = set()
         self.parser = self.parsegen(input, '<stdin>', '<stdin>')
+        self.errors_present = False
 
     def get(self):
         try:
@@ -594,7 +595,12 @@ class Preproc(preprocessor.Preprocessor):
             import io as StringIO
         ret = StringIO.StringIO()
         self.write(ret)
-        return (ret.getvalue(), self.macros)
+        return (self.errors_present, ret.getvalue(), self.macros)
+
+    def on_error(self, *args, **kwargs):
+        """Mark errors present when called."""
+        self.errors_present = True
+        return super(Preproc, self).on_error(*args, **kwargs)
 
     def on_include_not_found(self, is_system_include, curdir, includepath):
         """Don't pass through the #include line if the file does not exist"""
