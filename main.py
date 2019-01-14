@@ -32,7 +32,6 @@ import sys, os, getopt, re
 import lslopt.lslcommon
 import lslopt.lslloadlib
 from strutil import *
-from cpreproc import Preproc
 
 
 VERSION = '0.3.0beta'
@@ -701,6 +700,7 @@ def main(argv):
                         % i.decode('utf8', 'replace'))
                     return 1
 
+            from cpreproc import Preproc
             pperrors, script, macros = Preproc(script, defines, incpaths).get()
             if pperrors:
                 preshow = True # Force preshow to display errors
