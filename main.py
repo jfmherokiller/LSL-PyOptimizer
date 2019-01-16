@@ -252,7 +252,7 @@ Comments are always removed in the output, even when using --prettify.
 
 Preprocessor modes:
     int       Preprocess source using the internal preprocessor
-              (ignores --precmd; accepts --preargs -D and -I)
+              (ignores --precmd; accepts --preargs -D, -U and -I)
     ext       Invoke a preprocessor with no default parameters
     mcpp      Invoke mcpp as preprocessor, setting default parameters pertinent
               to it. Implies --precmd=mcpp
@@ -505,6 +505,9 @@ def main(argv):
         elif opt in ('-P', '--prearg'):
             preproc_user_preargs.append(arg)
 
+        elif opt in ('-A', '--postarg'):
+            preproc_user_postargs.append(arg)
+
         elif opt == '--prenodef':
             predefines = False
 
@@ -669,39 +672,9 @@ def main(argv):
         if preproc == 'int':
             # Use internal preprocessor.
 
-            # Parse -D and -I in preproc_cmdline.
-            skip_first = True
-            defines = []
-            # For stdin, this uses the current dir.
-            incpaths = [os.path.dirname(os.path.abspath(fname))]
-
-            for i in preproc_cmdline:
-                if skip_first:
-                    skip_first = False
-                    continue
-
-                if i.startswith('-D'):
-                    if '=' not in i:
-                        i += '=1'
-                    j = i.index('=')
-                    if j == 2:
-                        sys.stderr.write(u"\nError: Empty macro name"
-                            u" in definition.\n")
-                        return 1
-
-                    defines.append((i[2:j], i[j + 1:]))
-
-                elif i.startswith('-I'):
-                    incpaths.append(i[2:])
-
-                else:
-                    sys.stderr.write(u"\nError: Option for the internal"
-                        u" preprocessor not -D or -I:\n    %s\n"
-                        % i.decode('utf8', 'replace'))
-                    return 1
-
             from cpreproc import Preproc
-            pperrors, script, macros = Preproc(script, defines, incpaths).get()
+            pperrors, script, macros = Preproc(script,
+                preproc_cmdline[1:]).get()
             if pperrors:
                 preshow = True # Force preshow to display errors
 
