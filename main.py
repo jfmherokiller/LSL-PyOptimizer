@@ -25,7 +25,7 @@
 
 # This is the main executable program that imports the libraries.
 
-from lslopt.lslparse import parser,EParse
+from lslopt.lslparse import parser, EParse
 from lslopt.lsloutput import outscript
 from lslopt.lsloptimizer import optimizer
 import sys, os, getopt, re
@@ -33,14 +33,13 @@ import lslopt.lslcommon
 import lslopt.lslloadlib
 from strutil import *
 
-
 VERSION = '0.3.0beta'
 
 
 def ReportError(script, e):
     linestart = script.rfind(b'\n', 0, e.errorpos) + 1
     lineend = script.find(b'\n', e.errorpos)
-    if lineend == -1: lineend = len(script) # may hit EOF
+    if lineend == -1: lineend = len(script)  # may hit EOF
 
     # When the encoding of stderr is unknown (e.g. when redirected to a file),
     # output will be encoded in UTF-8; otherwise the terminal's encoding will
@@ -63,10 +62,12 @@ def ReportError(script, e):
     werr(" " * cno + "^\n")
     werr(e.args[0] + u"\n")
 
+
 class UniConvScript(object):
     """Converts the script to Unicode, setting the properties required by
     EParse to report a meaningful error position.
     """
+
     def __init__(self, script, options=(), filename=b'<stdin>', emap=False):
         self.linedir = []
         self.filename = filename
@@ -75,7 +76,7 @@ class UniConvScript(object):
         # we're in the dark about which file it comes from. User needs
         # --preshow to view the #line directives and find the correspondence
         # themselves.
-        #self.processpre = 'processpre' in options
+        # self.processpre = 'processpre' in options
         self.processpre = False
         self.script = script
 
@@ -87,6 +88,7 @@ class UniConvScript(object):
                 self.errorpos = e.start
                 raise EParse(self, u"Invalid UTF-8 in script")
         return self.script
+
 
 def PreparePreproc(script):
     """LSL accepts multiline strings, but the preprocessor doesn't.
@@ -122,27 +124,27 @@ def PreparePreproc(script):
     # currently, so it's good for compatibility.
     tok = re.compile(str2u(
         r'(?:'
-            r'/(?:\?\?/\n|\\\n)*\*.*?\*(?:\?\?/\n|\\\n)*/'
-            r'|/(?:\?\?/\n|\\\n)*/(?:\?\?/\n|\\\n|[^\n])*\n'
-            r'|[^"]'
+        r'/(?:\?\?/\n|\\\n)*\*.*?\*(?:\?\?/\n|\\\n)*/'
+        r'|/(?:\?\?/\n|\\\n)*/(?:\?\?/\n|\\\n|[^\n])*\n'
+        r'|[^"]'
         r')+'
         r'|"'
-        ), re.S)
+    ), re.S)
     # RE used inside strings.
     tok2 = re.compile(str2u(
         r'(?:'
-            r"\?\?[='()!<>-]"  # valid trigraph except ??/ (backslash)
-            r"|(?:\?\?/|\\)(?:\?\?[/='()!<>-]|[^\n])"
-                                # backslash trigraph or actual backslash,
-                                # followed by any trigraph or non-newline
-            r'|(?!\?\?/\n|\\\n|"|\n).'
-                                # any character that doesn't start a trigraph/
-                                # backslash escape followed by a newline
-                                # or is a newline or double quote, as we're
-                                # interested in all those individually.
-        r')+'                   # as many of those as possible
-        r'|\?\?/\n|\\\n|\n|"'   # or any of those individually
-        ))
+        r"\?\?[='()!<>-]"  # valid trigraph except ??/ (backslash)
+        r"|(?:\?\?/|\\)(?:\?\?[/='()!<>-]|[^\n])"
+        # backslash trigraph or actual backslash,
+        # followed by any trigraph or non-newline
+        r'|(?!\?\?/\n|\\\n|"|\n).'
+        # any character that doesn't start a trigraph/
+        # backslash escape followed by a newline
+        # or is a newline or double quote, as we're
+        # interested in all those individually.
+        r')+'  # as many of those as possible
+        r'|\?\?/\n|\\\n|\n|"'  # or any of those individually
+    ))
 
     pos = 0
     match = tok.search(script, pos)
@@ -164,10 +166,10 @@ def PreparePreproc(script):
                     continue
                 if matched2 == b'"':
                     if nlines:
-                        if script[pos:pos+1] == b'\n':
-                            col = -1 # don't add spaces if not necessary
+                        if script[pos:pos + 1] == b'\n':
+                            col = -1  # don't add spaces if not necessary
                         # col misses the quote added here, so add 1
-                        s += b'"' + b'\n'*nlines + b' '*(col+1)
+                        s += b'"' + b'\n' * nlines + b' ' * (col + 1)
                     else:
                         s += b'"'
                     break
@@ -186,22 +188,24 @@ def PreparePreproc(script):
 
     return s
 
+
 def ScriptHeader(script, avname):
     if avname:
         avname = b' - ' + avname
     return (b'//start_unprocessed_text\n/*'
-        # + re.sub(r'([*/])(?=[*|/])', r'\1|', script) # FS's algorithm
-        # HACK: This won't break strings containing ** or /* or // like URLs,
-        # while still being compatible with FS.
-        + re.sub(br'([*/]\||\*(?=/))', br'\1|', script)
-        + b'*/\n//end_unprocessed_text\n//nfo_preprocessor_version 0\n'
-          b'//program_version LSL PyOptimizer v' + str2b(VERSION)
-        + str2b(avname) + b'\n//mono\n\n')
+            # + re.sub(r'([*/])(?=[*|/])', r'\1|', script) # FS's algorithm
+            # HACK: This won't break strings containing ** or /* or // like URLs,
+            # while still being compatible with FS.
+            + re.sub(br'([*/]\||\*(?=/))', br'\1|', script)
+            + b'*/\n//end_unprocessed_text\n//nfo_preprocessor_version 0\n'
+              b'//program_version LSL PyOptimizer v' + str2b(VERSION)
+            + str2b(avname) + b'\n//mono\n\n')
 
-def Usage(progname, about = None):
+
+def Usage(progname, about=None):
     if about is None:
         werr(
-u"""LSL optimizer v{version}
+            u"""LSL optimizer v{version}
 
     (C) Copyright 2015-2019 Sei Lisa. All rights reserved.
 
@@ -265,7 +269,7 @@ make the output readable by the optimizer. This option is active by default.
 
     if about == 'optimizer-options':
         werr(
-u"""
+            u"""
 Optimizer control options.
 + means active by default, - means inactive by default.
 Case insensitive.
@@ -373,43 +377,47 @@ break/continue syntax extension (which is inactive by default).
 """.format(progname=str2u(progname)))
         return
 
-validoptions = frozenset(('extendedglobalexpr','breakcont','extendedtypecast',
-    'extendedassignment','allowkeyconcat','allowmultistrings','duplabels',
-    'lazylists','enableswitch','errmissingdefault','funcoverride','optimize',
-    'optsigns','optfloats','constfold','dcr','shrinknames','addstrings',
-    'foldtabs','warntabs','processpre','explicitcast','listlength','listadd',
-    'inline', 'help',
-    # undocumented
-    'lso','expr','rsrclimit',
-    # 'clear' is handled as a special case
-    # 'prettify' is internal, as it's a user flag
-))
+
+validoptions = frozenset(('extendedglobalexpr', 'breakcont', 'extendedtypecast',
+                          'extendedassignment', 'allowkeyconcat', 'allowmultistrings', 'duplabels',
+                          'lazylists', 'enableswitch', 'errmissingdefault', 'funcoverride', 'optimize',
+                          'optsigns', 'optfloats', 'constfold', 'dcr', 'shrinknames', 'addstrings',
+                          'foldtabs', 'warntabs', 'processpre', 'explicitcast', 'listlength', 'listadd',
+                          'inline', 'help',
+                          # undocumented
+                          'lso', 'expr', 'rsrclimit',
+                          # 'clear' is handled as a special case
+                          # 'prettify' is internal, as it's a user flag
+                          ))
+
 
 def main(argv):
     """Main executable."""
+    import os
 
-    # If it's good to append the basename to it, it's good to append the
-    # auxiliary files' names to it, which should be located where this file is.
-    lslopt.lslcommon.DataPath = __file__[:-len(os.path.basename(__file__))]
+    if hasattr(sys, "frozen") and sys.frozen in ("windows_exe", "console_exe"):
+        lslopt.lslcommon.DataPath = (os.path.dirname(os.path.abspath(sys.executable)) + os.sep)
+    else:
+        # If it's good to append the basename to it, it's good to append the
+        # auxiliary files' names to it, which should be located where this file is.
+        lslopt.lslcommon.DataPath = __file__[:-len(os.path.basename(__file__))]
 
     # Default options
-    options = set(('extendedglobalexpr','extendedtypecast','extendedassignment',
-        'allowkeyconcat','allowmultistrings','processpre','warntabs','optimize',
-        'optsigns','optfloats','constfold','dcr','errmissingdefault',
-        'listlength','listadd',
-        ))
+    options = {'extendedglobalexpr', 'extendedtypecast', 'extendedassignment', 'allowkeyconcat', 'allowmultistrings',
+               'processpre', 'warntabs', 'optimize', 'optsigns', 'optfloats', 'constfold', 'dcr', 'errmissingdefault',
+               'listlength', 'listadd'}
 
     assert not (options - validoptions), (u"Default options not present in"
-        u" validoptions: '%s'"
-        % (b"', '".join(options - validoptions)).decode('utf8'))
+                                          u" validoptions: '%s'"
+                                          % (b"', '".join(options - validoptions)).decode('utf8'))
 
     try:
         opts, args = getopt.gnu_getopt(argv[1:], 'hO:o:p:P:HTyb:L:A:',
-            ('optimizer-options=', 'help', 'version', 'output=', 'header',
-            'timestamp', 'python-exceptions', 'prettify', 'bom', 'emap',
-            'preproc=', 'precmd=', 'prearg=', 'prenodef', 'preshow',
-            'avid=', 'avname=', 'assetid=', 'shortname=', 'builtins='
-            'libdata=', 'postarg='))
+                                       ('optimizer-options=', 'help', 'version', 'output=', 'header',
+                                        'timestamp', 'python-exceptions', 'prettify', 'bom', 'emap',
+                                        'preproc=', 'precmd=', 'prearg=', 'prenodef', 'preshow',
+                                        'avid=', 'avname=', 'assetid=', 'shortname=', 'builtins='
+                                                                                      'libdata=', 'postarg='))
     except getopt.GetoptError as e:
         Usage(argv[0])
         werr(u"\nError: %s\n" % str(e).decode('utf8', 'replace'))
@@ -453,7 +461,7 @@ def main(argv):
                 if chgfix[1:] not in validoptions:
                     Usage(argv[0], 'optimizer-options')
                     werr(u"\nError: Unrecognized"
-                        u" optimizer option: %s\n" % chg.decode('utf8'))
+                         u" optimizer option: %s\n" % chg.decode('utf8'))
                     return 1
                 if chgfix[0] == '-':
                     options.discard(chgfix[1:])
@@ -487,8 +495,8 @@ def main(argv):
             if preproc not in supported:
                 Usage(argv[0])
                 werr(u"\nUnknown --preproc option: '%s'."
-                    u" Only '%s' supported.\n"
-                    % (preproc, str2u("', '".join(supported))))
+                     u" Only '%s' supported.\n"
+                     % (preproc, str2u("', '".join(supported))))
                 return 1
 
             if preproc == 'gcpp':
@@ -539,7 +547,7 @@ def main(argv):
     del opts
 
     if prettify:
-        options &= set(('rsrclimit',))
+        options &= {'rsrclimit'}
         options.add('prettify')
 
     rsrclimit = False
@@ -569,7 +577,7 @@ def main(argv):
         if fname is None:
             Usage(argv[0])
             werr(u"\nError: Input file not specified. Use -"
-                u" if you want to use stdin.\n")
+                 u" if you want to use stdin.\n")
             return 1
 
         del args
@@ -599,7 +607,7 @@ def main(argv):
             tmp = time.time()
             script_timestamp = time.strftime(
                 b'// Generated on %Y-%m-%dT%H:%M:%S.{0:06d}Z\n'
-                .format(int(tmp % 1 * 1000000)), time.gmtime(tmp))
+                    .format(int(tmp % 1 * 1000000)), time.gmtime(tmp))
             del tmp
 
         if shortname == '':
@@ -611,13 +619,13 @@ def main(argv):
             preproc_cmdline += [
                 '-undef', '-x', 'c', '-std=c99', '-nostdinc',
                 '-trigraphs', '-dN', '-fno-extended-identifiers',
-                ]
+            ]
 
         elif preproc == 'mcpp':
             preproc_cmdline += [
                 '-e', 'UTF-8', '-I-', '-N', '-2', '-3', '-j',
                 '-V199901L',
-                ]
+            ]
 
         if predefines:
             preproc_cmdline += [
@@ -629,7 +637,7 @@ def main(argv):
                 '-Dquaternion(...)=((quaternion)(__VA_ARGS__))',
                 '-Dvector(...)=((vector)(__VA_ARGS__))',
                 '-Dlist(...)=((list)(__VA_ARGS__))',
-                ]
+            ]
             preproc_cmdline.append('-D__AGENTKEY__="%s"' % avid)
             preproc_cmdline.append('-D__AGENTID__="%s"' % avid)
             preproc_cmdline.append('-D__AGENTIDRAW__=' + avid)
@@ -672,7 +680,7 @@ def main(argv):
             import subprocess
 
             p = subprocess.Popen(preproc_cmdline, stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE)
+                                 stdout=subprocess.PIPE)
             script = p.communicate(input=script)[0]
             status = p.wait()
             if status:
@@ -745,6 +753,7 @@ def main(argv):
             raise
         werr(e.__class__.__name__ + ': ' + str(e) + '\n')
         return 1
+
 
 if __name__ == '__main__':
     ret = main(sys.argv)

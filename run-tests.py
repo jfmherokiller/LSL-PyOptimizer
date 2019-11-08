@@ -45,6 +45,9 @@
 # output matches the .err file. Both default to empty strings.
 #
 
+from lslopt import lslcommon, lslfuncs, lslparse, lsloutput, lslloadlib
+from strutil import *
+from lslopt.lslcommon import nr
 import unittest
 import sys
 import os
@@ -60,12 +63,11 @@ if sys.version_info.major < 3:
     from StringIO import StringIO as StringStream
 else:
     from io import BytesIO as StringStream
-from lslopt import lslcommon,lslfuncs,lslparse,lsloutput,lslloadlib
-from lslopt.lslcommon import nr
-from strutil import *
+
 
 class EArgError(Exception):
     pass
+
 
 def parseArgs(s):
     """Parse a command line, Bourne shell-style"""
@@ -77,17 +79,17 @@ def parseArgs(s):
     # States
     Space = 0           # Space between args.
     SBackslash = 1      # Backslash after space. Returns to Space if followed
-                        # by LF, otherwise inserts the character verbatim and
-                        # goes to Normal.
+    # by LF, otherwise inserts the character verbatim and
+    # goes to Normal.
     Normal = 2          # Normal argument.
     NBackslash = 3      # Backslash in Normal mode. Returns to Normal if
-                        # followed by LF, otherwise inserts the character
-                        # verbatim.
+    # followed by LF, otherwise inserts the character
+    # verbatim.
     DQuote = 4          # Double quote mode.
     DQBackslash = 5     # Backslash in double quote mode. Returns to DQuote if
-                        # followed by LF; inserts the character verbatim if
-                        # followed by '"', '`', '$' or '\' and inserts a '\'
-                        # plus the character verbatim in any other case.
+    # followed by LF; inserts the character verbatim if
+    # followed by '"', '`', '$' or '\' and inserts a '\'
+    # plus the character verbatim in any other case.
     SQuote = 6          # Single quote mode.
 
     State = Space
@@ -151,20 +153,20 @@ def parseArgs(s):
 
 
 #import codecs
-## sh-style argument parsing
-## identify line continuations
-#cont_re = re.compile( '\\\\\n'
+# sh-style argument parsing
+# identify line continuations
+# cont_re = re.compile( '\\\\\n'
 #                      '|(?:\.|[^ \t\n\'])'
 #                     r"|'[^']*'")
-## separates words
-#args_re = re.compile(r'(?:'
+# separates words
+# args_re = re.compile(r'(?:'
 #                        r'\\.'
 #                         '|[^ \t\n\'"]'
 #                        r'|"(?:\\.|[^"])*"'
 #                        r"|'[^']*'"
 #                     r')+')
-## matches types of parts of a word ('...', "...", \x, x)
-#part_re = re.compile(r'(?:'
+# matches types of parts of a word ('...', "...", \x, x)
+# part_re = re.compile(r'(?:'
 #                        r'\\.'
 #                         '|[^ \t\'"]'
 #                     r')+'
@@ -201,11 +203,14 @@ def tryRead(fn):
 
 # In StringIO, mixing unicode and str causes problems with non-ASCII chars.
 # Avoid it by overriding the write method, to always encode unicode as UTF-8.
+
+
 class StrUTF8IO(StringStream):
     def write(self, s):
         StringStream.write(self, any2b(s))
 
-def invokeMain(argv, stdin = None):
+
+def invokeMain(argv, stdin=None):
     """Invoke main.main, substituting stdin, stdout, stderr.
     Returns tuple with stdout and stderr."""
     # Revert globals to initial state
@@ -241,7 +246,7 @@ def invokeMain(argv, stdin = None):
 
     return (stdout_output, stderr_output)
 
-#def tolEqual(actual, expected, tol):
+# def tolEqual(actual, expected, tol):
 #    """Strict equality. Like reallyEqual, but a tolerance can
 #    be specified for comparing floats.
 #    """
@@ -268,19 +273,21 @@ def invokeMain(argv, stdin = None):
 #    # Fall back to 'classic' equality
 #    return actual == expected
 #
-#def reallyEqual(actual, expected):
+# def reallyEqual(actual, expected):
 #    """Strictest equality. The types must be equal. For floats, it checks
 #    that the signs are equal, even for -0.0 and for NaNs. For the rest,
 #    it falls back to ==.
 #    """
 #    return tolEqual(actual, expected, 0.0)
 #
-#def reprEqual(self, actual, expected):
+# def reprEqual(self, actual, expected):
 #    """Returns whether the values are equal when comparing their repr's."""
 #    return repr(actual) == repr(expected)
 
+
 class UnitTestCase(unittest.TestCase):
     pass
+
 
 class UnitTestRegression(UnitTestCase):
     def test_regression_misc(self):
@@ -336,51 +343,52 @@ class UnitTestRegression(UnitTestCase):
         sys.stderr.write('\nRunning parser error tests: ')
         parser = lslparse.parser(lslloadlib.LoadLibrary())
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'f(){integer i;i>>=i;}')
+                          'f(){integer i;i>>=i;}')
         self.assertRaises(lslparse.EParseCantChangeState, parser.parse,
-            'f(){if(1)state default;else;}default{timer(){}}')
+                          'f(){if(1)state default;else;}default{timer(){}}')
         self.assertRaises(lslparse.EParseCantChangeState, parser.parse,
-            'f(){if(1);else state default;}default{timer(){}}')
+                          'f(){if(1);else state default;}default{timer(){}}')
         self.assertRaises(lslparse.EParseCantChangeState, parser.parse,
-            'f(){if(1)if(1)state default;else;else;}default{timer(){}}')
+                          'f(){if(1)if(1)state default;else;else;}default{timer(){}}')
 
         # Test behaviour of void functions
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'default{timer(){<llDie(),0,0>;}}')
+                          'default{timer(){<llDie(),0,0>;}}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'default{timer(){[<llDie(),0,0>];}}')
+                          'default{timer(){[<llDie(),0,0>];}}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'default{timer(){key a=llDie();}}')
+                          'default{timer(){key a=llDie();}}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'default{timer(){key a;a=llDie();}}')
+                          'default{timer(){key a;a=llDie();}}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'default{timer(){do;while(llDie());}}')
+                          'default{timer(){do;while(llDie());}}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'default{timer(){for(;llDie(););}}')
+                          'default{timer(){for(;llDie(););}}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'default{timer(){while(llDie());}}')
+                          'default{timer(){while(llDie());}}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'default{timer(){if(llDie());}}')
+                          'default{timer(){if(llDie());}}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'default{timer(){if(llDie());else;}}')
+                          'default{timer(){if(llDie());else;}}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'default{timer(){[llDie()];}}', ('optimize',))
+                          'default{timer(){[llDie()];}}', ('optimize',))
         parser.parse('default{timer(){[llDie()];}}')
         parser.parse('default{timer(){llDie();}}')
         parser.parse('default{timer(){(llDie());}}')
         parser.parse('default{timer(){for(llDie();1;llDie());}}',
-            ('optimize',))
+                     ('optimize',))
         # 'return <void expr>' works in the same situations as state changes
         self.assertRaises(lslparse.EParseReturnShouldBeEmpty, parser.parse,
-            'default{timer(){return llDie();}}')
+                          'default{timer(){return llDie();}}')
         self.assertRaises(lslparse.EParseReturnShouldBeEmpty, parser.parse,
-            'default{timer(){if(1)return llDie();else;}}')
+                          'default{timer(){if(1)return llDie();else;}}')
         self.assertRaises(lslparse.EParseReturnShouldBeEmpty, parser.parse,
-            'default{timer(){if(1);else return llDie();}}')
+                          'default{timer(){if(1);else return llDie();}}')
         self.assertRaises(lslparse.EParseReturnShouldBeEmpty, parser.parse,
-            'default{timer(){return 1;}}')
+                          'default{timer(){return 1;}}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'default{timer(){if(1)return 1;}}')
+                          'default{timer(){if(1)return 1;}}')
+
 
 class UnitTestCoverage(UnitTestCase):
     def test_coverage_misc(self):
@@ -398,14 +406,14 @@ class UnitTestCoverage(UnitTestCase):
                           1, lslcommon.Vector)
         # Can't typecast vector to key
         self.assertRaises(lslfuncs.ELSLTypeMismatch, lslfuncs.typecast,
-                          lslcommon.Vector((1.,2.,3.)), lslcommon.Key)
+                          lslcommon.Vector((1., 2., 3.)), lslcommon.Key)
         # Can't typecast quaternion to key
         self.assertRaises(lslfuncs.ELSLTypeMismatch, lslfuncs.typecast,
-                          lslcommon.Quaternion((1.,2.,3.,4.)), lslcommon.Key)
+                          lslcommon.Quaternion((1., 2., 3., 4.)), lslcommon.Key)
         # Can't typecast list to vector
         self.assertRaises(lslfuncs.ELSLTypeMismatch, lslfuncs.typecast,
                           [1, 1., lslcommon.Key(u'blah'),
-                           lslcommon.Quaternion((1.,0.,0.,0.))],
+                           lslcommon.Quaternion((1., 0., 0., 0.))],
                           lslcommon.Vector)
         # Can't typecast key to integer
         self.assertRaises(lslfuncs.ELSLTypeMismatch, lslfuncs.typecast,
@@ -423,17 +431,17 @@ class UnitTestCoverage(UnitTestCase):
                           u"1", u"2")
         # Can't multiply quaternion and float in any order
         self.assertRaises(lslfuncs.ELSLTypeMismatch, lslfuncs.mul,
-                          lslcommon.Quaternion((1.,2.,3.,4.)), 1.)
+                          lslcommon.Quaternion((1., 2., 3., 4.)), 1.)
         self.assertRaises(lslfuncs.ELSLTypeMismatch, lslfuncs.mul,
-                          1., lslcommon.Quaternion((1.,2.,3.,4.)))
+                          1., lslcommon.Quaternion((1., 2., 3., 4.)))
         # Can't multiply quaternion by vector (but the opposite order is OK)
         self.assertRaises(lslfuncs.ELSLTypeMismatch, lslfuncs.mul,
-                          lslcommon.Quaternion((1.,2.,3.,4.)),
-                          lslcommon.Vector((1.,2.,3.)))
+                          lslcommon.Quaternion((1., 2., 3., 4.)),
+                          lslcommon.Vector((1., 2., 3.)))
         # Can't divide quaternion by vector either
         self.assertRaises(lslfuncs.ELSLTypeMismatch, lslfuncs.div,
-                          lslcommon.Quaternion((1.,2.,3.,4.)),
-                          lslcommon.Vector((1.,2.,3.)))
+                          lslcommon.Quaternion((1., 2., 3., 4.)),
+                          lslcommon.Vector((1., 2., 3.)))
         # Can't mod floats
         self.assertRaises(lslfuncs.ELSLTypeMismatch, lslfuncs.mod, 3., 3)
         # Can't compare string and integer
@@ -443,22 +451,23 @@ class UnitTestCoverage(UnitTestCase):
         # Bytes is not a valid type to multiply by (in any order)
         self.assertRaises(lslfuncs.ELSLInvalidType, lslfuncs.mul, b"a", 3)
         self.assertRaises(lslfuncs.ELSLInvalidType, lslfuncs.mul,
-                          lslcommon.Vector((3.,4.,5.)), b"a")
+                          lslcommon.Vector((3., 4., 5.)), b"a")
         self.assertRaises(lslfuncs.ELSLInvalidType, lslfuncs.typecast,
                           b"", unicode)
 
         # v2f/q2f coverage (force conversion from ints to floats)
-        self.assertEqual(repr(lslfuncs.v2f(lslcommon.Vector((1,0,0)))),
+        self.assertEqual(repr(lslfuncs.v2f(lslcommon.Vector((1, 0, 0)))),
                          'Vector((1.0, 0.0, 0.0))')
-        self.assertEqual(repr(lslfuncs.q2f(lslcommon.Quaternion((1,0,0,0)))),
+        self.assertEqual(repr(lslfuncs.q2f(lslcommon.Quaternion((1, 0, 0, 0)))),
                          'Quaternion((1.0, 0.0, 0.0, 0.0))')
         # Key repr coverage
         self.assertEqual(repr(lslcommon.Key(u'')), "Key(u'')"
-            if str != unicode else "Key('')")
+                         if str != unicode else "Key('')")
 
         # string + key coverage
         self.assertEqual(lslfuncs.add(u'a', lslcommon.Key(u'b')), u'ab')
-        self.assertEqual(type(lslfuncs.add(u'a', lslcommon.Key(u'b'))), unicode)
+        self.assertEqual(
+            type(lslfuncs.add(u'a', lslcommon.Key(u'b'))), unicode)
 
         # The SEF table prevents this assertion from being reachable via script.
         self.assertRaises(lslfuncs.ELSLCantCompute, lslfuncs.llXorBase64Strings,
@@ -467,7 +476,7 @@ class UnitTestCoverage(UnitTestCase):
                           3, 5, 7)
         # Check invalid type in llGetListEntryType
         self.assertRaises(lslfuncs.ELSLInvalidType, lslfuncs.llGetListEntryType,
-            [b'a'], 0)
+                          [b'a'], 0)
 
         # Check that Value2LSL raises an exception if the type is unknown.
         outmod = lsloutput.outscript()
@@ -497,10 +506,10 @@ class UnitTestCoverage(UnitTestCase):
         save_IsCalc = lslcommon.IsCalc
         lslcommon.IsCalc = True
         try:
-            out = outmod.output((script, [{'a':{'Kind':'v','Loc':1,'Scope':0,
-                                                'Type':'integer'}
-                                         }]
-                               ))
+            out = outmod.output((script, [{'a': {'Kind': 'v', 'Loc': 1, 'Scope': 0,
+                                                 'Type': 'integer'}
+                                           }]
+                                 ))
         finally:
             lslcommon.IsCalc = save_IsCalc
 
@@ -510,178 +519,186 @@ class UnitTestCoverage(UnitTestCase):
     def test_coverage_parser(self):
         """Cover the error cases. There are too many to make a test of each."""
         parser = lslparse.parser(lslloadlib.LoadLibrary(
-            builtins = 'unit_tests/builtins-coverage-2.txt',
-            fndata = 'unit_tests/builtins-coverage-2.txt'))
+            builtins='unit_tests/builtins-coverage-2.txt',
+            fndata='unit_tests/builtins-coverage-2.txt'))
         self.assertRaises(lslparse.EParseNoConversion, parser.parse,
-            'f(){list L;(integer)L[0];}', ('lazylists',))
+                          'f(){list L;(integer)L[0];}', ('lazylists',))
         parser = lslparse.parser(lslloadlib.LoadLibrary())
         sys.stderr.write('\nRunning parser exception coverage tests: ')
         # Parse_unary_postfix_expression
         self.assertRaises(lslparse.EParseUEOF, parser.parse, u'f(){key x=')
         self.assertRaises(lslparse.EParseUndefined, parser.parse,
-            'f(){g();}')
+                          'f(){g();}')
         self.assertRaises(lslparse.EParseUndefined, parser.parse,
-            'integer g;f(){g();}')
+                          'integer g;f(){g();}')
         self.assertRaises(lslparse.EParseUndefined, parser.parse,
-            'f(){f=0;}')
+                          'f(){f=0;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){integer V; V[1] = 0;}', ('lazylists',))
+                          'f(){integer V; V[1] = 0;}', ('lazylists',))
         self.assertRaises(lslparse.EParseFunctionMismatch, parser.parse,
-            'f(){list V; V[1,1] = 0;}', ('lazylists',))
+                          'f(){list V; V[1,1] = 0;}', ('lazylists',))
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){list V; V[""] = 0;}', ('lazylists',))
+                          'f(){list V; V[""] = 0;}', ('lazylists',))
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){list V; V[1] = llDie();}', ('lazylists',))
+                          'f(){list V; V[1] = llDie();}', ('lazylists',))
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){string s;s++;}')
+                          'f(){string s;s++;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){string s;++s;}')
+                          'f(){string s;++s;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){string s;s=llDie();}')
+                          'f(){string s;s=llDie();}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){string s;s+=(key)"";}')
+                          'f(){string s;s+=(key)"";}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){string s;s-=s;}')
+                          'f(){string s;s-=s;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){string s;s*=2;}')
+                          'f(){string s;s*=2;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){vector v;v%=1.0;}')
+                          'f(){vector v;v%=1.0;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){string s;s>>=s;}', ('extendedassignment',))
+                          'f(){string s;s>>=s;}', ('extendedassignment',))
         # Parse_unary_expression
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){-"";}')
+                          'f(){-"";}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){!"";}')
+                          'f(){!"";}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){~"";}')
+                          'f(){~"";}')
         self.assertRaises(lslparse.EParseUndefined, parser.parse,
-            'f(){++f;}')
+                          'f(){++f;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){(key)1;}')
+                          'f(){(key)1;}')
         self.assertRaises(lslparse.EParseFunctionMismatch, parser.parse,
-            'f(){list L;(integer)L[""];}', ('lazylists',))
+                          'f(){list L;(integer)L[""];}', ('lazylists',))
         # Parse_factor
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){""*2;}')
+                          'f(){""*2;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){<1,1,1>%2;}')
+                          'f(){<1,1,1>%2;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){<1,1,1>/<1,1,1>;}')
+                          'f(){<1,1,1>/<1,1,1>;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){<1,1,1>/"";}')
+                          'f(){<1,1,1>/"";}')
         # Parse_term
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){llDie()+1;}')
+                          'f(){llDie()+1;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){""-1;}')
+                          'f(){""-1;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){[]+llDie();}')
+                          'f(){[]+llDie();}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){(key)""+(key)"";}')
+                          'f(){(key)""+(key)"";}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){""+(key)"";}')
+                          'f(){""+(key)"";}')
         # Parse_shift
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){"">>1;}')
+                          'f(){"">>1;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){1<<"";}')
+                          'f(){1<<"";}')
         # Parse_inequality
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){""<"";}')
+                          'f(){""<"";}')
         # Parse_comparison
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){llDie()==3;}')
+                          'f(){llDie()==3;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){""==3;}')
+                          'f(){""==3;}')
         # Parse_bitbool_factor
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){""&3;}')
+                          'f(){""&3;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){3&"";}')
+                          'f(){3&"";}')
         # Parse_bitxor_term
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){""^3;}')
+                          'f(){""^3;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){3^"";}')
+                          'f(){3^"";}')
         # Parse_bitbool_term
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){""|3;}')
+                          'f(){""|3;}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){3|"";}')
+                          'f(){3|"";}')
         # Parse_expression
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){3||"";}')
+                          'f(){3||"";}')
         self.assertRaises(lslparse.EParseTypeMismatch, parser.parse,
-            'f(){""&&3;}')
+                          'f(){""&&3;}')
         # Parse_optional_expression_list
         self.assertRaises(lslparse.EParseFunctionMismatch, parser.parse,
-            'f(){llSay(0);}')
+                          'f(){llSay(0);}')
         self.assertRaises(lslparse.EParseAlreadyDefined, parser.parse,
-            'f(){@x;@x;}')
+                          'f(){@x;@x;}')
         self.assertRaises(lslparse.EParseAlreadyDefined, parser.parse,
-            'f(){integer x;integer x;}')
+                          'f(){integer x;integer x;}')
         self.assertRaises(lslparse.EParseAlreadyDefined, parser.parse,
-            'f(integer x, integer x){}')
+                          'f(integer x, integer x){}')
         self.assertRaises(lslparse.EParseAlreadyDefined, parser.parse,
-            'default{timer(){}timer(){}}')
+                          'default{timer(){}timer(){}}')
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'default{timer(){state state;}}')
+                          'default{timer(){state state;}}')
         self.assertRaises(lslparse.EParseUndefined, parser.parse,
-            'default{timer(){state undefined;}}')
+                          'default{timer(){state undefined;}}')
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'default{timer(){switch(1){case 1;}}}', ('enableswitch',))
+                          'default{timer(){switch(1){case 1;}}}', ('enableswitch',))
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'default{timer(){switch(1){default;}}}', ('enableswitch',))
+                          'default{timer(){switch(1){default;}}}', ('enableswitch',))
         self.assertRaises(lslparse.EParseInvalidBrkContArg, parser.parse,
-            'default{timer(){while(1){break 0;}}}', ('breakcont',))
+                          'default{timer(){while(1){break 0;}}}', ('breakcont',))
         self.assertRaises(lslparse.EParseInvalidBrkContArg, parser.parse,
-            'default{timer(){while(1){break 2;}}}', ('breakcont',))
+                          'default{timer(){while(1){break 2;}}}', ('breakcont',))
         self.assertRaises(lslparse.EParseInvalidBrkContArg, parser.parse,
-            'default{timer(){while(1){continue 0;}}}', ('breakcont',))
+                          'default{timer(){while(1){continue 0;}}}', ('breakcont',))
         self.assertRaises(lslparse.EParseInvalidBrkContArg, parser.parse,
-            'default{timer(){while(1){continue 2;}}}', ('breakcont',))
+                          'default{timer(){while(1){continue 2;}}}', ('breakcont',))
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'integer T=-TRUE;default{timer(){}}')
+                          'integer T=-TRUE;default{timer(){}}')
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'list L=[[]];default{timer(){}}')
+                          'list L=[[]];default{timer(){}}')
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'default{timer(integer i){}}')
+                          'default{timer(integer i){}}')
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'i = 0;',)
+                          'i = 0;',)
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'default{timer(){}}state{timer(){}}')
+                          'default{timer(){}}state{timer(){}}')
         self.assertRaises(lslparse.EParseUndefined, parser.parse,
-            'default{timer(){jump undefined;}}')
+                          'default{timer(){jump undefined;}}')
         # BuildTempGlobalsTable coverage
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            ';')
+                          ';')
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'f(;')
+                          'f(;')
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'f();')
+                          'f();')
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'integer f=')
+                          'integer f=')
         self.assertRaises(lslparse.EParseUEOF, parser.parse,
-            'integer /*')
+                          'integer /*')
         self.assertRaises(lslparse.EParseSyntax, parser.parse,
-            'default{timer(){}}state e;')
+                          'default{timer(){}}state e;')
+
 
 class UnitTestExpr(UnitTestCase):
     pass
 
+
 class UnitTestLSO(UnitTestCase):
     pass
 
+
 class UnitTestPreproc(UnitTestCase):
     pass
+
 
 def generateScriptTests():
     """Find all files in unit_tests/*.d/*.{lsl,run} and generate tests for
     them.
     """
-
-    path = os.path.dirname(__file__)
+    if hasattr(sys, "frozen") and sys.frozen in ("windows_exe", "console_exe"):
+        path = (os.path.dirname(os.path.abspath(sys.executable)) + os.sep)
+    else:
+        # If it's good to append the basename to it, it's good to append the
+        # auxiliary files' names to it, which should be located where this file is.
+        path = os.path.dirname(__file__)
     if path:
         os.chdir(path)
 
@@ -689,9 +706,9 @@ def generateScriptTests():
     for testsuite in testsuites:
         files = glob.glob(os.path.join('unit_tests',
                                        testsuite.lower() + '.suite', '*.lsl')
-           )  + glob.glob(os.path.join('unit_tests',
-                                       testsuite.lower() + '.suite', '*.run')
-           )
+                          ) + glob.glob(os.path.join('unit_tests',
+                                                     testsuite.lower() + '.suite', '*.run')
+                                        )
         files = list(set([os.path.splitext(x)[0] for x in files]))
         files.sort()
         for fbase in files:
@@ -711,20 +728,20 @@ def generateScriptTests():
                                          '-']))
                     werr(u"\nRunning test %s: " % any2u(fbase))
                     actual_stdout, actual_stderr = invokeMain(runargs, stdin)
-                    actual_stdout = (actual_stdout.replace(b'\r',b'\r\n')
-                                     .replace(b'\r\n\n',b'\n')
-                                     .replace(b'\r\n',b'\n'))
+                    actual_stdout = (actual_stdout.replace(b'\r', b'\r\n')
+                                     .replace(b'\r\n\n', b'\n')
+                                     .replace(b'\r\n', b'\n'))
 
-                    actual_stderr = (actual_stderr.replace(b'\r',b'\r\n')
-                                     .replace(b'\r\n\n',b'\n')
-                                     .replace(b'\r\n',b'\n'))
+                    actual_stderr = (actual_stderr.replace(b'\r', b'\r\n')
+                                     .replace(b'\r\n\n', b'\n')
+                                     .replace(b'\r\n', b'\n'))
 
                     try:
                         if expected_stderr.startswith(b'REGEX\n'):
                             self.assertIsNotNone(
                                 re.search(expected_stderr[6:],
                                           actual_stderr.decode('utf8')
-                                )
+                                          )
                             )
                         else:
                             self.assertTrue(expected_stderr == actual_stderr)
@@ -736,11 +753,13 @@ def generateScriptTests():
                         werr(actual_stderr)
                         if difflib and expected_stderr and actual_stderr:
                             sys.stderr.write(u'\n************ diff:\n'
-                                 + u'\n'.join(difflib.unified_diff(
-                                    b2u(expected_stderr).split(u'\n'),
-                                    b2u(actual_stderr).split(u'\n'),
-                                    'expected', 'actual', lineterm=''
-                            )))
+                                             + u'\n'.join(difflib.unified_diff(
+                                                 b2u(expected_stderr).split(
+                                                     u'\n'),
+                                                 b2u(actual_stderr).split(
+                                                     u'\n'),
+                                                 'expected', 'actual', lineterm=''
+                                             )))
                         werr(u'\n************ ')
                         raise
                     try:
@@ -758,10 +777,10 @@ def generateScriptTests():
                         if difflib and expected_stdout and actual_stdout:
                             werr(u'\n************ diff:\n'
                                  + u'\n'.join(difflib.unified_diff(
-                                    b2u(expected_stdout).split('\n'),
-                                    b2u(actual_stdout).split('\n'),
-                                    'expected', 'actual', lineterm=''
-                            )))
+                                     b2u(expected_stdout).split('\n'),
+                                     b2u(actual_stdout).split('\n'),
+                                     'expected', 'actual', lineterm=''
+                                 )))
                         sys.stderr.write(u'\n************ ')
                         raise
                 return TestFunction
@@ -785,7 +804,7 @@ def generateScriptTests():
                                     else None)
 
             TestFunction.__name__ = ('test_' + testsuite + '__'
-                + os.path.basename(fbase).replace('-','_'))
+                                     + os.path.basename(fbase).replace('-', '_'))
             fail = tryRead(fbase + '.fail')
             if fail is not None:
                 if fail:
@@ -801,5 +820,5 @@ def generateScriptTests():
 
 generateScriptTests()
 if __name__ == '__main__':
-    unittest.main(argv = sys.argv)
-#UnitTestRegression().test_Regression__multiline_string()
+    unittest.main(argv=sys.argv)
+# UnitTestRegression().test_Regression__multiline_string()
